@@ -1,1 +1,0 @@
-# kharid_le
