@@ -1,0 +1,4 @@
+enum UserRole {
+  seller,
+  buyer,
+}
