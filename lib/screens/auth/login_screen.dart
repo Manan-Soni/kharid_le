@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../core/enums/user_role.dart';
+import '../../navigation/buyer_navbar.dart';
+import '../../providers/auth_provider.dart';
+import '../seller/seller_home.dart';
 
 const Color _primaryColor = Color(0xFF6600CC);
 const Color _backgroundColor = Color(0xFFF4F5F9);
@@ -6,14 +11,14 @@ const Color _titleColor = Color(0xFF151827);
 const Color _subtitleColor = Color(0xFF6E717C);
 const Color _cardBorderColor = Color(0xFFE2E3EA);
 
-class SellerLoginScreen extends StatefulWidget {
-  const SellerLoginScreen({super.key});
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
 
   @override
-  State<SellerLoginScreen> createState() => _SellerLoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _SellerLoginScreenState extends State<SellerLoginScreen> {
+class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
@@ -27,6 +32,8 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+
     return Scaffold(
       backgroundColor: _backgroundColor,
       body: SafeArea(
@@ -36,9 +43,17 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const SizedBox(height: 16),
+                Center(
+                  child: Image.asset(
+                    'assets/app_logo.png',
+                    height: 72,
+                    fit: BoxFit.contain,
+                  ),
+                ),
                 const SizedBox(height: 24),
                 Text(
-                  'Welcome back',
+                  'Welcome!',
                   textAlign: TextAlign.left,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.w700,
@@ -47,7 +62,7 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                 ),
                 const SizedBox(height: 4),
                 const Text(
-                  'Sign in to continue to your seller dashboard',
+                  'Sign in to continue',
                   style: TextStyle(
                     fontSize: 13,
                     color: _subtitleColor,
@@ -101,11 +116,15 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: _cardBorderColor),
+                            borderSide: const BorderSide(
+                              color: _cardBorderColor,
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: _primaryColor),
+                            borderSide: const BorderSide(
+                              color: _primaryColor,
+                            ),
                           ),
                         ),
                       ),
@@ -153,11 +172,15 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: _cardBorderColor),
+                            borderSide: const BorderSide(
+                              color: _cardBorderColor,
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: _primaryColor),
+                            borderSide: const BorderSide(
+                              color: _primaryColor,
+                            ),
                           ),
                         ),
                       ),
@@ -184,12 +207,33 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
+                      if (auth.errorMessage != null) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFEBEE),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            auth.errorMessage!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFFE53935),
+                            ),
+                          ),
+                        ),
+                      ],
                       SizedBox(
                         width: double.infinity,
                         height: 48,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _primaryColor,
+                            foregroundColor: _backgroundColor,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),
@@ -198,10 +242,52 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          onPressed: () {
-                            // TODO: Implement email/password sign-in.
-                          },
-                          child: const Text('Sign in'),
+                          onPressed: auth.isLoading
+                              ? null
+                              : () async {
+                                  FocusScope.of(context).unfocus();
+
+                                  final email = _emailController.text;
+                                  final password = _passwordController.text;
+
+                                  await auth.login(email, password);
+
+                                  if (!mounted) return;
+
+                                  if (auth.errorMessage != null) {
+                                    return;
+                                  }
+
+                                  final role = auth.role;
+                                  if (role == null) return;
+
+                                  Widget destination;
+                                  if (role == UserRole.seller) {
+                                    destination = const SellerHome();
+                                  } else {
+                                    destination = const BuyerNavbar();
+                                  }
+
+                                  Navigator.of(context).pushAndRemoveUntil(
+                                    MaterialPageRoute(
+                                      builder: (_) => destination,
+                                    ),
+                                    (route) => false,
+                                  );
+                                },
+                          child: auth.isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor:
+                                        AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : const Text('Log in'),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -264,8 +350,8 @@ class _SellerLoginScreenState extends State<SellerLoginScreen> {
                             },
                           ),
                           label: const Text(
-                            'Sign in with Google',
-                            style: TextStyle(color: _titleColor),
+                            'SIGN In WITH GOOGLE',
+                            style: TextStyle(color: _subtitleColor),
                           ),
                         ),
                       ),
